@@ -108,7 +108,7 @@ flowchart TD
     KW -- "да<br/>ищу квартиру · сниму апартаменты ·<br/>нужна студия · помогите найти жильё…" --> SAVE["Сохранить + matched_phrase"]
     SAVE --> ALERT["📨 Telegram-алерт в чат"]
     SAVEN -. "правка ключей / минусов в боте" .-> RE["Пересчёт задним числом<br/>в меню «по дням» и CSV"]
-    SAVE -. .-> RE
+    SAVE -.-> RE
 
     classDef hit fill:#1f7a34,stroke:#0d3d19,color:#fff
     classDef miss fill:#7a1f1f,stroke:#3d0d0d,color:#fff
