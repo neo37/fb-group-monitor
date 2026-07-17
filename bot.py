@@ -105,8 +105,8 @@ def days_keyboard(prefix="posts"):
             rows.append(row); row = []
     if row:
         rows.append(row)
-    rows.append([InlineKeyboardButton(text="📅 Вся неделя", callback_data=f"{prefix}:week"),
-                 InlineKeyboardButton(text="🔎 Только совпадения", callback_data=f"{prefix}:matches")])
+    rows.append([InlineKeyboardButton(text="📅 Вся неделя (все посты)", callback_data=f"{prefix}:week"),
+                 InlineKeyboardButton(text="🔎 Совпадения за неделю", callback_data=f"{prefix}:matches")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -141,7 +141,8 @@ def query_posts(sel):
     else:
         rows = c.execute("SELECT rowid AS rid, * FROM seen_posts WHERE date(posted_at)=? ORDER BY posted_at DESC", (sel,)).fetchall()
     rows = annotate(rows, c)
-    if sel == "matches":
+    if sel != "week":
+        # конкретный день и «совпадения» — только посты, прошедшие фильтры
         rows = [r for r in rows if r["matched_phrase"]]
     c.close()
     return rows
