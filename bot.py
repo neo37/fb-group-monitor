@@ -105,8 +105,7 @@ def days_keyboard(prefix="posts"):
             rows.append(row); row = []
     if row:
         rows.append(row)
-    rows.append([InlineKeyboardButton(text="📅 Вся неделя (все посты)", callback_data=f"{prefix}:week"),
-                 InlineKeyboardButton(text="🔎 Совпадения за неделю", callback_data=f"{prefix}:matches")])
+    rows.append([InlineKeyboardButton(text="📅 Вся неделя", callback_data=f"{prefix}:week")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -115,16 +114,15 @@ def annotate(rows, c, keep_negatives=False):
     keep_negatives=True (для CSV): посты с минус-словами не выкидываются,
     а помечаются, каким словом отсечены."""
     phrases = [r["phrase"] for r in c.execute("SELECT phrase FROM keywords WHERE enabled=1")]
-    negs = {matcher.lemma(r["word"]): r["word"] for r in
-            c.execute("SELECT word FROM negative_keywords WHERE enabled=1")}
+    negs = [r["word"] for r in c.execute("SELECT word FROM negative_keywords WHERE enabled=1")]
     out = []
     for r in rows:
         toks = matcher.lemmas(r["text"] or "")
-        hit = toks & set(negs)
+        hit = matcher.neg_hit(toks, negs)
         d = dict(r)
         if hit:
             d["matched_phrase"] = None
-            d["negative_word"] = negs[next(iter(hit))]
+            d["negative_word"] = hit
             if keep_negatives:
                 out.append(d)
             continue
@@ -146,9 +144,8 @@ def query_posts(sel):
         rows = c.execute("SELECT rowid AS rid, * FROM seen_posts WHERE date(posted_at)=?"
                          + NOT_BLACKLISTED + " ORDER BY posted_at DESC", (sel,)).fetchall()
     rows = annotate(rows, c)
-    if sel != "week":
-        # конкретный день и «совпадения» — только посты, прошедшие фильтры
-        rows = [r for r in rows if r["matched_phrase"]]
+    # в боте всегда только посты, прошедшие фильтры; полный поток — в CSV
+    rows = [r for r in rows if r["matched_phrase"]]
     c.close()
     return rows
 

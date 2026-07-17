@@ -83,7 +83,7 @@ flowchart TB
 `matcher.py` normalizes every word to its lemma with **pymorphy3**, so Russian morphology is handled: *ищу / ищем / ищете* → *искать*.
 
 - A post **matches a phrase** when it contains **all** words of that phrase (stop-words `в/на/с/и/у/по/за/для` are skipped). `ищу квартиру` catches "Ищем квартиру в Будве".
-- A single **negative keyword** found in the post kills the match: landlord verbs (*сдам, продаю*), ad noise (*трансфер, экскурсия*), wrong geography (*лондон, испания, турция…*).
+- A **negative keyword or phrase** (all its words present) found in the post kills the match: landlord verbs (*сдам, продаю*), ad noise (*трансфер, экскурсия*), wrong geography (*лондон, испания, турция…*).
 - A **per-post blacklist** (🚫 button in the bot) hides an exact post from every view and export.
 - Both dictionaries live in SQLite and are edited from the bot. Views and CSV exports re-annotate posts on every request, so edits apply retroactively.
 
@@ -93,7 +93,7 @@ flowchart TB
 
 | Button | What it does |
 |---|---|
-| 📋 Посты | Pick a day of the last week → only posts that **passed the filters**, grouped by source group. «Вся неделя» shows the raw feed. |
+| 📋 Посты | Pick a day of the last week → only posts that **passed the filters**, grouped by source group. The raw unfiltered feed is available only via CSV export. |
 | 👤 Профиль | Chat ID, access status, ⭐ favorites, 🚫 blacklist, 💳 top-up, 🚪 logout |
 | 📤 CSV | Week or full export; every post row carries its match phrase or the negative word that cut it. All fields quoted, commas as separator, inner quotes sanitized. |
 | 🔑 Ключевые слова | Add/remove match phrases (stored lowercase) |
