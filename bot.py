@@ -161,10 +161,12 @@ async def posts_menu(msg: Message):
     await msg.answer("За какой день показать посты?", reply_markup=days_keyboard())
 
 
-def post_kb(rid):
+def post_kb(r):
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="⭐ В избранное", callback_data=f"fav:{rid}"),
-        InlineKeyboardButton(text="✍️ Ответ", callback_data=f"rep:{rid}"),
+        InlineKeyboardButton(text="⭐ В избранное", callback_data=f"fav:{r['rid']}"),
+        InlineKeyboardButton(text="✍️ Ответ", callback_data=f"rep:{r['rid']}"),
+        InlineKeyboardButton(text="📋 Текст",
+                             copy_text=CopyTextButton(text=(r["text"] or "")[:256])),
     ]])
 
 
@@ -199,7 +201,7 @@ async def posts_show(cb: CallbackQuery):
                           parse_mode="HTML")
         for r in grp:
             await safe_answer(cb.message, fmt_post(r), parse_mode="HTML",
-                              disable_web_page_preview=True, reply_markup=post_kb(r["rid"]))
+                              disable_web_page_preview=True, reply_markup=post_kb(r))
             await asyncio.sleep(0.4)
 
 
@@ -301,6 +303,8 @@ async def send_favorites(msg):
         kb = InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text="✍️ Ответ", callback_data=f"rep:{r['rid']}"),
             InlineKeyboardButton(text="🗑 Убрать", callback_data=f"unfav:{r['rid']}"),
+            InlineKeyboardButton(text="📋 Текст",
+                                 copy_text=CopyTextButton(text=(r["text"] or "")[:256])),
         ]])
         await safe_answer(msg, fmt_post(r), parse_mode="HTML",
                           disable_web_page_preview=True, reply_markup=kb)
@@ -624,7 +628,8 @@ async def start(msg: Message):
         "🚫 Минус-слова — посты с ними игнорируются\n"
         "👥 Группы — какие группы мониторим\n"
         "📝 Мои посты — оповещения о любых комментариях под ними\n\n"
-        "Скачивание новых постов — автоматически 2 раза в сутки (09:00 и 21:00).",
+        "Скачивание новых постов — автоматически 6 раз в сутки (каждые 4 часа),"
+        " каждый раз с места, где закончил.",
         reply_markup=MENU)
 
 

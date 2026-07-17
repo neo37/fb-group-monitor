@@ -25,10 +25,19 @@ def check_groups(conn):
         print("нет групп или ключевых слов")
         return
 
+    from datetime import datetime, timezone, timedelta as td
+    run_started = datetime.now(timezone.utc)
+
     if "--dataset" in sys.argv:
         items = apify_client.get_dataset(sys.argv[sys.argv.index("--dataset") + 1])
     else:
-        items = apify_client.scrape_groups([g["url"] for g in groups])
+        st = conn.execute("SELECT value FROM state WHERE key='last_scrape_at'").fetchone()
+        # читаем с момента прошлого успешного скрапа (с получасовым нахлёстом), иначе за сутки
+        newer = ((datetime.fromisoformat(st["value"]) - td(minutes=30))
+                 .strftime("%Y-%m-%dT%H:%M:%S") if st else "1 day")
+        items = apify_client.scrape_groups([g["url"] for g in groups], newer_than=newer)
+        conn.execute("INSERT OR REPLACE INTO state(key,value) VALUES('last_scrape_at',?)",
+                     (run_started.strftime("%Y-%m-%dT%H:%M:%S"),))
     print(f"получено постов: {len(items)}")
 
     new_matches = 0

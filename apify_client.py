@@ -34,11 +34,11 @@ def get_dataset(dataset_id):
     return r.json()
 
 
-def scrape_groups(group_urls, posts_per_group=5):
+def scrape_groups(group_urls, posts_per_group=10, newer_than="1 day"):
     return run_actor(GROUPS_ACTOR, {
         "startUrls": [{"url": u} for u in group_urls],
         "resultsLimit": posts_per_group,
-        "onlyPostsNewerThan": "1 day",
+        "onlyPostsNewerThan": newer_than,
         "viewOption": "CHRONOLOGICAL",
     })
 

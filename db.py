@@ -37,6 +37,10 @@ CREATE TABLE IF NOT EXISTS seen_posts (
     posted_at TEXT,
     created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS state (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
 CREATE TABLE IF NOT EXISTS authorized_chats (
     chat_id INTEGER PRIMARY KEY,
     valid_until TEXT,
