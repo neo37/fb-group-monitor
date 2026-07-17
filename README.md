@@ -94,6 +94,30 @@ flowchart TB
 - A **per-post blacklist** (🚫 button in the bot) hides an exact post from every view and export.
 - Both dictionaries live in SQLite and are edited from the bot. Views and CSV exports re-annotate posts on every request, so edits apply retroactively.
 
+#### Matching & filtering flow
+
+```mermaid
+flowchart TD
+    P["Новый пост из группы"] --> DUP{"Уже в seen_posts?"}
+    DUP -- да --> SKIP["Пропустить"]
+    DUP -- нет --> LEM["Лемматизация pymorphy3<br/>каждое слово → нормальная форма<br/>ищу / ищем / ищет → искать"]
+    LEM --> NEG{"Сработал минус-запись?<br/>(все её слова есть в посте)"}
+    NEG -- "да<br/>сдам · продам · для клиента ·<br/>пёс · котёнок · посуточно ·<br/>испания · хорватия · прага…" --> SAVEN["Сохранить в seen_posts<br/>matched_phrase = ∅ (тишина)"]
+    NEG -- нет --> KW{"Совпал ключ?<br/>(все слова фразы есть в посте,<br/>стоп-слова в/на/с/для отброшены)"}
+    KW -- "нет" --> SAVEN
+    KW -- "да<br/>ищу квартиру · сниму апартаменты ·<br/>нужна студия · помогите найти жильё…" --> SAVE["Сохранить + matched_phrase"]
+    SAVE --> ALERT["📨 Telegram-алерт в чат"]
+    SAVEN -. "правка ключей / минусов в боте" .-> RE["Пересчёт задним числом<br/>в меню «по дням» и CSV"]
+    SAVE -. .-> RE
+
+    classDef hit fill:#1f7a34,stroke:#0d3d19,color:#fff
+    classDef miss fill:#7a1f1f,stroke:#3d0d0d,color:#fff
+    class SAVE,ALERT hit
+    class SAVEN,SKIP miss
+```
+
+Порядок важен: **минус-слова проверяются раньше ключей** — одно совпавшее минус-слово отменяет весь матч. Гео при этом *не обязательно* (группы и так про Черногорию), поэтому заграница отсекается списком стран-минусов, а не требованием упомянуть город.
+
 ### 3. Telegram bot (the dashboard)
 
 `bot.py` (aiogram 3, long polling). Menu:
