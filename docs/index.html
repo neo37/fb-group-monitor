@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FB Group Monitor — turn Facebook groups into leads</title>
+<style>
+  :root{
+    --bg:#f5f1e8; --ink:#111; --card:#fff;
+    --yellow:#ffd93d; --pink:#ff90e8; --blue:#4de1ff; --green:#7bf1a8; --orange:#ff7a4d;
+    --shadow:6px 6px 0 #111;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Space Grotesk","Inter",system-ui,sans-serif;line-height:1.5}
+  .wrap{max-width:1040px;margin:0 auto;padding:24px}
+  .badge{display:inline-block;background:var(--ink);color:#fff;padding:6px 14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;transform:rotate(-2deg)}
+  header{padding:64px 0 40px}
+  h1{font-size:clamp(40px,7vw,84px);line-height:.95;font-weight:800;text-transform:uppercase;margin:20px 0}
+  h1 .hl{background:var(--yellow);border:3px solid var(--ink);box-shadow:var(--shadow);padding:0 12px;display:inline-block;transform:rotate(-1.5deg)}
+  .sub{font-size:clamp(17px,2.4vw,22px);max-width:640px;font-weight:500}
+  .cta-row{display:flex;gap:16px;margin-top:32px;flex-wrap:wrap}
+  .btn{display:inline-block;border:3px solid var(--ink);box-shadow:var(--shadow);padding:14px 26px;font-weight:800;font-size:17px;text-decoration:none;color:var(--ink);background:var(--pink);transition:transform .08s,box-shadow .08s}
+  .btn.alt{background:var(--blue)}
+  .btn:hover{transform:translate(3px,3px);box-shadow:3px 3px 0 #111}
+  .marquee{border-top:3px solid var(--ink);border-bottom:3px solid var(--ink);background:var(--yellow);padding:10px 0;overflow:hidden;white-space:nowrap;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+  .marquee span{display:inline-block;padding-left:100%;animation:slide 22s linear infinite}
+  @keyframes slide{to{transform:translateX(-100%)}}
+  section{padding:56px 0}
+  h2{font-size:clamp(28px,4vw,44px);text-transform:uppercase;font-weight:800;margin-bottom:28px}
+  h2 .tag{background:var(--green);border:3px solid var(--ink);box-shadow:var(--shadow);padding:2px 10px;display:inline-block;transform:rotate(1.5deg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px}
+  .card{background:var(--card);border:3px solid var(--ink);box-shadow:var(--shadow);padding:22px}
+  .card h3{font-size:20px;font-weight:800;margin-bottom:8px;text-transform:uppercase}
+  .card .emoji{font-size:34px;display:block;margin-bottom:10px}
+  .card.c1{background:var(--card)} .card.c2{background:#fff8dc} .card.c3{background:#ffeef9}
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0;counter-reset:step}
+  .step{border:3px solid var(--ink);background:var(--card);padding:20px;position:relative;margin:0 14px 14px 0;box-shadow:var(--shadow)}
+  .step b{display:block;font-size:17px;text-transform:uppercase;margin-bottom:6px}
+  .step::before{counter-increment:step;content:counter(step);position:absolute;top:-16px;left:-16px;width:36px;height:36px;background:var(--orange);border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800}
+  .term{background:var(--ink);color:var(--green);border:3px solid var(--ink);box-shadow:var(--shadow);padding:20px;font-family:"JetBrains Mono",monospace;font-size:14px;overflow-x:auto}
+  .term .p{color:var(--pink)} .term .c{color:#888}
+  footer{border-top:3px solid var(--ink);padding:28px 0;font-weight:600}
+  footer a{color:var(--ink)}
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#17151f;--ink:#111;--card:#fff}
+    body{color:#f5f1e8}
+    .step,.card{color:var(--ink)}
+    footer{color:#f5f1e8}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="badge">Telegram bot × Apify × LLM</span>
+    <h1>FB Group<br><span class="hl">Monitor</span></h1>
+    <p class="sub">Watches Facebook groups for people looking for accommodation, filters out the noise with morphology-aware keywords, and pings you in Telegram — with an AI-drafted reply ready to paste.</p>
+    <div class="cta-row">
+      <a class="btn" href="https://github.com/neo37/fb-group-monitor">★ GitHub</a>
+      <a class="btn alt" href="#how">How it works ↓</a>
+    </div>
+  </header>
+</div>
+
+<div class="marquee"><span>leads, not likes • scrape daily • match by lemmas • kill spam with negative keywords • reply with one tap • leads, not likes • scrape daily • match by lemmas • kill spam with negative keywords • reply with one tap •</span></div>
+
+<div class="wrap">
+  <section>
+    <h2><span class="tag">Features</span></h2>
+    <div class="grid">
+      <div class="card c1"><span class="emoji">🔎</span><h3>Smart matching</h3><p>Phrase matches when a post contains <b>all</b> its words in any grammatical form — Russian lemmatization via pymorphy3. «ищу квартиру» catches «ищем квартиру».</p></div>
+      <div class="card c2"><span class="emoji">🚫</span><h3>Negative keywords</h3><p>Landlord ads, wrong countries, excursion spam — one stop-word hides them everywhere, retroactively. Dictionaries are edited straight in the bot.</p></div>
+      <div class="card c3"><span class="emoji">✍️</span><h3>AI reply drafts</h3><p>One tap generates a friendly reply pitching your apartments, hooked to the post's dates and city. Copy-to-clipboard button included.</p></div>
+      <div class="card c2"><span class="emoji">⭐</span><h3>Favorites & CSV</h3><p>Star the best leads, export everything to CSV with match / filter annotations for each post.</p></div>
+      <div class="card c3"><span class="emoji">💬</span><h3>Comment watch</h3><p>Any new comment under your own Facebook posts triggers an instant alert — no filters applied.</p></div>
+      <div class="card c1"><span class="emoji">🔐</span><h3>Stars paywall</h3><p>Access via date-derived daily / monthly passwords. Password images are generated on the fly and sold for Telegram Stars.</p></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2><span class="tag">How it works</span></h2>
+    <div class="flow">
+      <div class="step"><b>Scrape</b>Apify actor pulls fresh posts from your Facebook groups once a day. Everything lands in SQLite.</div>
+      <div class="step"><b>Match</b>Lemma-based phrase matching + negative keywords. Filters are reactive — edit words, results change instantly.</div>
+      <div class="step"><b>Alert</b>Telegram bot pings your DM and team group with each lead, grouped by source.</div>
+      <div class="step"><b>Reply</b>LLM drafts the answer, you tap “copy” and paste it under the post. Done.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="tag">Quick start</span></h2>
+    <div class="term">
+<span class="c"># clone & install</span><br>
+git clone https://github.com/neo37/fb-group-monitor && cd fb-group-monitor<br>
+python3 -m venv .venv && .venv/bin/pip install aiogram pymorphy3 requests pillow<br>
+cp .env.example .env  <span class="c"># add your tokens</span><br>
+<span class="p">.venv/bin/python bot.py</span>       <span class="c"># the dashboard bot</span><br>
+<span class="p">.venv/bin/python worker.py</span>    <span class="c"># daily scrape pass (systemd timer / cron)</span>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">FB Group Monitor · MIT · <a href="https://github.com/neo37/fb-group-monitor">github.com/neo37/fb-group-monitor</a></div>
+</footer>
+</body>
+</html>

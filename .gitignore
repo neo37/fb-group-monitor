@@ -1,0 +1,7 @@
+.env
+monitor.db
+.venv/
+__pycache__/
+*.csv
+*.log
+*.png
