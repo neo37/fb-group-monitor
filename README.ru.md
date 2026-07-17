@@ -18,20 +18,29 @@ Telegram-бот-дашборд, который мониторит Facebook-гр�
 
 ## Схема работы
 
+![Схема архитектуры](assets/architecture.png)
+
+<details>
+<summary>Исходник Mermaid</summary>
+
 ```mermaid
 flowchart TB
-    FB[Группы Facebook] --> A1[Apify: groups-scraper]
-    MYP[Ваши посты FB] --> A2[Apify: comments-scraper]
-    W[worker.py — таймер каждые 4 ч] --> A1 & A2
-    A1 & A2 -->|JSON| W
-    W --> M[matcher.py — леммы pymorphy3]
-    W -->|все посты| DB[(SQLite)]
-    W -->|оповещения| TG[Telegram]
-    B[bot.py — меню и кнопки] <--> DB
-    B -->|черновик ответа| LLM[LLM API]
+    FB["Группы Facebook"] --> A1["Apify: groups-scraper"]
+    MYP["Ваши посты FB"] --> A2["Apify: comments-scraper"]
+    W["worker.py — таймер каждые 4 ч"] --> A1
+    W --> A2
+    A1 -->|"JSON"| W
+    A2 -->|"JSON"| W
+    W --> M["matcher.py — леммы pymorphy3"]
+    W -->|"все посты"| DB[("SQLite")]
+    W -->|"оповещения"| TG["Telegram"]
+    B["bot.py — меню и кнопки"] <--> DB
+    B -->|"черновик ответа"| LLM["LLM API"]
     B <--> TG
-    TG <--> U((Вы / группа команды))
+    TG <--> U(("Вы / группа команды"))
 ```
+
+</details>
 
 ## Скрапинг
 

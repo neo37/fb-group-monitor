@@ -24,29 +24,34 @@ Telegram-bot dashboard that watches Facebook groups for people looking for accom
 
 ## Architecture
 
+![Architecture](assets/architecture.png)
+
+<details>
+<summary>Mermaid source</summary>
+
 ```mermaid
 flowchart TB
-    subgraph Facebook
-        FB[Facebook groups]
-        MYP[Your own FB posts]
+    subgraph FBK["Facebook"]
+        FB["Facebook groups"]
+        MYP["Your own FB posts"]
     end
 
-    subgraph Apify cloud
-        A1[facebook-groups-scraper]
-        A2[facebook-comments-scraper]
+    subgraph APIFY["Apify cloud"]
+        A1["facebook-groups-scraper"]
+        A2["facebook-comments-scraper"]
     end
 
-    subgraph Server
-        W[worker.py<br/>systemd timer, every 4 h]
-        M[matcher.py<br/>pymorphy3 lemmas]
-        DB[(SQLite<br/>monitor.db)]
-        B[bot.py<br/>aiogram 3, long polling]
-        WP[wireproxy<br/>WARP SOCKS5 tunnel]
+    subgraph SRV["Server"]
+        W["worker.py<br/>systemd timer, every 4 h"]
+        M["matcher.py<br/>pymorphy3 lemmas"]
+        DB[("SQLite<br/>monitor.db")]
+        B["bot.py<br/>aiogram 3, long polling"]
+        WP["wireproxy<br/>WARP SOCKS5 tunnel"]
     end
 
-    LLM[OpenAI-compatible LLM<br/>reply drafts]
-    TG[Telegram API]
-    U((You / team chat))
+    LLM["OpenAI-compatible LLM<br/>reply drafts"]
+    TG["Telegram API"]
+    U(("You / team chat"))
 
     FB --> A1
     MYP --> A2
@@ -64,6 +69,8 @@ flowchart TB
     WP <--> TG
     TG <--> U
 ```
+
+</details>
 
 ## How it works, in detail
 

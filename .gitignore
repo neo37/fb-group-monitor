@@ -5,3 +5,4 @@ __pycache__/
 *.csv
 *.log
 *.png
+!assets/*.png
