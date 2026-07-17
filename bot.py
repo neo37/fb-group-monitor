@@ -29,15 +29,14 @@ import imggen
 import llm
 import matcher
 
+# всегда авторизована только личка владельца; группы — по паролю (день/месяц)
 ALLOWED = {int(os.environ["TG_CHAT_ID"])}
-if os.environ.get("TG_CHAT_ID_2"):
-    ALLOWED.add(int(os.environ["TG_CHAT_ID_2"]))
 
 bot = Bot(os.environ["TG_BOT_TOKEN"])
 dp = Dispatcher()
 
 MENU = ReplyKeyboardMarkup(resize_keyboard=True, keyboard=[
-    [KeyboardButton(text="📋 Посты"), KeyboardButton(text="⭐ Избранное"), KeyboardButton(text="📤 CSV")],
+    [KeyboardButton(text="📋 Посты"), KeyboardButton(text="👤 Профиль"), KeyboardButton(text="📤 CSV")],
     [KeyboardButton(text="🔑 Ключевые слова"), KeyboardButton(text="🚫 Минус-слова")],
     [KeyboardButton(text="👥 Группы"), KeyboardButton(text="📝 Мои посты")],
 ])
@@ -72,9 +71,18 @@ def allowed(msg):
     if msg.chat.id in ALLOWED:
         return True
     c = conn()
-    r = c.execute("SELECT 1 FROM authorized_chats WHERE chat_id=?", (msg.chat.id,)).fetchone()
+    r = c.execute("SELECT 1 FROM authorized_chats WHERE chat_id=?"
+                  " AND valid_until >= datetime('now','localtime')", (msg.chat.id,)).fetchone()
     c.close()
     return bool(r)
+
+
+def auth_until(msg_chat_id):
+    c = conn()
+    r = c.execute("SELECT valid_until FROM authorized_chats WHERE chat_id=?",
+                  (msg_chat_id,)).fetchone()
+    c.close()
+    return r["valid_until"] if r else None
 
 
 def conn():
@@ -218,10 +226,51 @@ async def fav_del(cb: CallbackQuery):
     await cb.message.delete()
 
 
+@dp.message(F.text == "👤 Профиль")
+async def profile(msg: Message):
+    if not allowed(msg):
+        await msg.answer("Доступ закрыт. Авторизуйтесь:", reply_markup=auth_kb())
+        return
+    c = conn()
+    n_fav = c.execute("SELECT count(*) FROM favorites").fetchone()[0]
+    c.close()
+    if msg.chat.id in ALLOWED:
+        status = "владелец (бессрочно)"
+    else:
+        u = auth_until(msg.chat.id)
+        status = f"до {u[:10]}" if u else "нет"
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"⭐ Избранное ({n_fav})", callback_data="favlist")],
+        [InlineKeyboardButton(text="💳 Пополнить баланс", callback_data="topup")],
+    ])
+    await msg.answer(f"👤 <b>Профиль</b>\n\nЧат: <code>{msg.chat.id}</code>\n"
+                     f"Доступ: {status}", parse_mode="HTML", reply_markup=kb)
+
+
+@dp.callback_query(F.data == "topup")
+async def topup(cb: CallbackQuery):
+    await cb.answer()
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🖼 Пароль на день — 100 ⭐", callback_data="buy:pw_day")],
+        [InlineKeyboardButton(text="🖼 Пароль на месяц — 2500 ⭐", callback_data="buy:pw_month")],
+    ])
+    await cb.message.answer("💳 Продление доступа за Telegram Stars:", reply_markup=kb)
+
+
+@dp.callback_query(F.data == "favlist")
+async def fav_list_cb(cb: CallbackQuery):
+    await cb.answer()
+    await send_favorites(cb.message)
+
+
 @dp.message(F.text == "⭐ Избранное")
 async def fav_list(msg: Message):
     if not allowed(msg):
         return
+    await send_favorites(msg)
+
+
+async def send_favorites(msg):
     c = conn()
     rows = c.execute(
         "SELECT p.rowid AS rid, p.* FROM favorites f JOIN seen_posts p ON p.post_url=f.post_url"
@@ -481,13 +530,23 @@ async def auth_start(cb: CallbackQuery, state: FSMContext):
 @dp.message(Auth.password)
 async def auth_check(msg: Message, state: FSMContext):
     await state.clear()
-    if (msg.text or "").strip() in (day_password(), month_password()):
-        c = conn()
-        c.execute("INSERT OR IGNORE INTO authorized_chats(chat_id) VALUES(?)", (msg.chat.id,))
-        c.commit(); c.close()
-        await msg.answer("✅ Доступ открыт.", reply_markup=MENU)
+    pw = (msg.text or "").strip()
+    t = date.today()
+    if pw == day_password():
+        until = t.strftime("%Y-%m-%d 23:59:59")
+        label = "до конца дня"
+    elif pw == month_password():
+        nxt = (t.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        until = nxt.strftime("%Y-%m-%d 23:59:59")
+        label = "до конца месяца"
     else:
         await msg.answer("❌ Неверный пароль.", reply_markup=auth_kb())
+        return
+    c = conn()
+    c.execute("INSERT OR REPLACE INTO authorized_chats(chat_id, valid_until) VALUES(?,?)",
+              (msg.chat.id, until))
+    c.commit(); c.close()
+    await msg.answer(f"✅ Доступ открыт {label} ({until[:10]}).", reply_markup=MENU)
 
 
 PRICES = {"pw_day": ("Пароль на день", 100), "pw_month": ("Пароль на месяц", 2500)}
@@ -549,7 +608,7 @@ async def start(msg: Message):
         "🚫 Минус-слова — посты с ними игнорируются\n"
         "👥 Группы — какие группы мониторим\n"
         "📝 Мои посты — оповещения о любых комментариях под ними\n\n"
-        "Скачивание новых постов — автоматически раз в сутки.",
+        "Скачивание новых постов — автоматически 2 раза в сутки (09:00 и 21:00).",
         reply_markup=MENU)
 
 

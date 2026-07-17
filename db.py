@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS seen_posts (
 );
 CREATE TABLE IF NOT EXISTS authorized_chats (
     chat_id INTEGER PRIMARY KEY,
+    valid_until TEXT,
     created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS favorites (
@@ -59,6 +60,10 @@ def connect():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(authorized_chats)")}
+    if "valid_until" not in cols:
+        conn.execute("ALTER TABLE authorized_chats ADD COLUMN valid_until TEXT")
+        conn.commit()
     return conn
 
 
