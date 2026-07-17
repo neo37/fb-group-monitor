@@ -134,12 +134,17 @@ def annotate(rows, c, keep_negatives=False):
     return out
 
 
+NOT_BLACKLISTED = " AND post_url NOT IN (SELECT post_url FROM blacklist)"
+
+
 def query_posts(sel):
     c = conn()
     if sel in ("week", "matches"):
-        rows = c.execute("SELECT rowid AS rid, * FROM seen_posts WHERE posted_at >= datetime('now','-7 days') ORDER BY posted_at DESC").fetchall()
+        rows = c.execute("SELECT rowid AS rid, * FROM seen_posts WHERE posted_at >= datetime('now','-7 days')"
+                         + NOT_BLACKLISTED + " ORDER BY posted_at DESC").fetchall()
     else:
-        rows = c.execute("SELECT rowid AS rid, * FROM seen_posts WHERE date(posted_at)=? ORDER BY posted_at DESC", (sel,)).fetchall()
+        rows = c.execute("SELECT rowid AS rid, * FROM seen_posts WHERE date(posted_at)=?"
+                         + NOT_BLACKLISTED + " ORDER BY posted_at DESC", (sel,)).fetchall()
     rows = annotate(rows, c)
     if sel != "week":
         # конкретный день и «совпадения» — только посты, прошедшие фильтры
@@ -163,12 +168,13 @@ async def posts_menu(msg: Message):
 
 
 def post_kb(r):
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="⭐ В избранное", callback_data=f"fav:{r['rid']}"),
-        InlineKeyboardButton(text="✍️ Ответ", callback_data=f"rep:{r['rid']}"),
-        InlineKeyboardButton(text="📋 Текст",
-                             copy_text=CopyTextButton(text=(r["text"] or "")[:256])),
-    ]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⭐ В избранное", callback_data=f"fav:{r['rid']}"),
+         InlineKeyboardButton(text="✍️ Ответ", callback_data=f"rep:{r['rid']}")],
+        [InlineKeyboardButton(text="📋 Текст",
+                              copy_text=CopyTextButton(text=(r["text"] or "")[:256])),
+         InlineKeyboardButton(text="🚫 В ЧС", callback_data=f"bl:{r['rid']}")],
+    ])
 
 
 async def safe_answer(msg, *args, **kwargs):
@@ -220,6 +226,59 @@ async def fav_add(cb: CallbackQuery):
     await cb.answer("⭐ Добавлено в избранное")
 
 
+@dp.callback_query(F.data.startswith("bl:"))
+async def bl_add(cb: CallbackQuery):
+    rid = cb.data.split(":")[1]
+    c = conn()
+    r = c.execute("SELECT post_url FROM seen_posts WHERE rowid=?", (rid,)).fetchone()
+    if r:
+        c.execute("INSERT OR IGNORE INTO blacklist(post_url) VALUES(?)", (r["post_url"],))
+        c.commit()
+    c.close()
+    await cb.answer("🚫 Пост в чёрном списке")
+    try:
+        await cb.message.delete()
+    except Exception:
+        pass
+
+
+@dp.callback_query(F.data.startswith("unbl:"))
+async def bl_del(cb: CallbackQuery):
+    rid = cb.data.split(":")[1]
+    c = conn()
+    r = c.execute("SELECT post_url FROM seen_posts WHERE rowid=?", (rid,)).fetchone()
+    if r:
+        c.execute("DELETE FROM blacklist WHERE post_url=?", (r["post_url"],))
+        c.commit()
+    c.close()
+    await cb.answer("Возвращён из ЧС")
+    try:
+        await cb.message.delete()
+    except Exception:
+        pass
+
+
+@dp.callback_query(F.data == "bllist")
+async def bl_list(cb: CallbackQuery):
+    await cb.answer()
+    c = conn()
+    rows = c.execute(
+        "SELECT p.rowid AS rid, p.* FROM blacklist b JOIN seen_posts p ON p.post_url=b.post_url"
+        " ORDER BY b.created_at DESC LIMIT 30").fetchall()
+    rows = [dict(r) | {"matched_phrase": None} for r in rows]
+    c.close()
+    if not rows:
+        await cb.message.answer("Чёрный список пуст.")
+        return
+    await cb.message.answer(f"🚫 Чёрный список: {len(rows)}")
+    for r in rows:
+        kb = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="↩️ Вернуть", callback_data=f"unbl:{r['rid']}")]])
+        await safe_answer(cb.message, fmt_post(r), parse_mode="HTML",
+                          disable_web_page_preview=True, reply_markup=kb)
+        await asyncio.sleep(0.4)
+
+
 @dp.callback_query(F.data.startswith("unfav:"))
 async def fav_del(cb: CallbackQuery):
     rid = cb.data.split(":")[1]
@@ -246,8 +305,12 @@ async def profile(msg: Message):
     else:
         u = auth_until(msg.chat.id)
         status = f"до {u[:10]}" if u else "нет"
+    c2 = conn()
+    n_bl = c2.execute("SELECT count(*) FROM blacklist").fetchone()[0]
+    c2.close()
     kb_rows = [
-        [InlineKeyboardButton(text=f"⭐ Избранное ({n_fav})", callback_data="favlist")],
+        [InlineKeyboardButton(text=f"⭐ Избранное ({n_fav})", callback_data="favlist"),
+         InlineKeyboardButton(text=f"🚫 Чёрный список ({n_bl})", callback_data="bllist")],
         [InlineKeyboardButton(text="💳 Пополнить баланс", callback_data="topup")],
     ]
     if msg.chat.id not in ALLOWED:
@@ -357,9 +420,11 @@ async def csv_export(cb: CallbackQuery):
     sel = cb.data.split(":", 1)[1]
     c = conn()
     if sel == "week":
-        rows = c.execute("SELECT * FROM seen_posts WHERE posted_at >= datetime('now','-7 days') ORDER BY posted_at DESC").fetchall()
+        rows = c.execute("SELECT * FROM seen_posts WHERE posted_at >= datetime('now','-7 days')"
+                         + NOT_BLACKLISTED + " ORDER BY posted_at DESC").fetchall()
     else:
-        rows = c.execute("SELECT * FROM seen_posts ORDER BY posted_at DESC").fetchall()
+        rows = c.execute("SELECT * FROM seen_posts WHERE 1=1" + NOT_BLACKLISTED
+                         + " ORDER BY posted_at DESC").fetchall()
     rows = annotate(rows, c, keep_negatives=True)
     c.close()
     path = BASE / f"posts_{sel}_{date.today().isoformat()}.csv"

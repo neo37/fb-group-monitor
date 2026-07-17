@@ -50,6 +50,10 @@ CREATE TABLE IF NOT EXISTS favorites (
     post_url TEXT PRIMARY KEY,
     created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS blacklist (
+    post_url TEXT PRIMARY KEY,
+    created_at TEXT DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS seen_comments (
     comment_id TEXT PRIMARY KEY,
     post_url TEXT,
