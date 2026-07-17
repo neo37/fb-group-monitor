@@ -32,7 +32,11 @@ import matcher
 # всегда авторизована только личка владельца; группы — по паролю (день/месяц)
 ALLOWED = {int(os.environ["TG_CHAT_ID"])}
 
-bot = Bot(os.environ["TG_BOT_TOKEN"])
+_session = None
+if os.environ.get("TG_PROXY"):
+    from aiogram.client.session.aiohttp import AiohttpSession
+    _session = AiohttpSession(proxy=os.environ["TG_PROXY"])
+bot = Bot(os.environ["TG_BOT_TOKEN"], session=_session)
 dp = Dispatcher()
 
 MENU = ReplyKeyboardMarkup(resize_keyboard=True, keyboard=[

@@ -3,6 +3,8 @@ import requests
 
 TOKEN = os.environ["TG_BOT_TOKEN"]
 CHAT_IDS = [c for c in (os.environ.get("TG_CHAT_ID"), os.environ.get("TG_CHAT_ID_2")) if c]
+PROXIES = ({"https": os.environ["TG_PROXY"], "http": os.environ["TG_PROXY"]}
+           if os.environ.get("TG_PROXY") else None)
 
 
 def send(text):
@@ -10,7 +12,8 @@ def send(text):
     for chat_id in CHAT_IDS:
         r = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage",
                           json={"chat_id": chat_id, "text": text, "parse_mode": "HTML",
-                                "disable_web_page_preview": True}, timeout=30)
+                                "disable_web_page_preview": True}, timeout=30,
+                          proxies=PROXIES)
         if not r.json().get("ok"):
             errors.append(f"{chat_id}: {r.text[:150]}")
     if len(errors) == len(CHAT_IDS):
