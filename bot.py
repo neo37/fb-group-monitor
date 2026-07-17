@@ -239,20 +239,32 @@ async def profile(msg: Message):
     else:
         u = auth_until(msg.chat.id)
         status = f"до {u[:10]}" if u else "нет"
-    kb = InlineKeyboardMarkup(inline_keyboard=[
+    kb_rows = [
         [InlineKeyboardButton(text=f"⭐ Избранное ({n_fav})", callback_data="favlist")],
         [InlineKeyboardButton(text="💳 Пополнить баланс", callback_data="topup")],
-    ])
+    ]
+    if msg.chat.id not in ALLOWED:
+        kb_rows.append([InlineKeyboardButton(text="🚪 Выйти", callback_data="logout")])
     await msg.answer(f"👤 <b>Профиль</b>\n\nЧат: <code>{msg.chat.id}</code>\n"
-                     f"Доступ: {status}", parse_mode="HTML", reply_markup=kb)
+                     f"Доступ: {status}", parse_mode="HTML",
+                     reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_rows))
+
+
+@dp.callback_query(F.data == "logout")
+async def logout(cb: CallbackQuery):
+    c = conn()
+    c.execute("DELETE FROM authorized_chats WHERE chat_id=?", (cb.message.chat.id,))
+    c.commit(); c.close()
+    await cb.answer("Вы вышли")
+    await cb.message.answer("🚪 Авторизация сброшена.", reply_markup=auth_kb())
 
 
 @dp.callback_query(F.data == "topup")
 async def topup(cb: CallbackQuery):
     await cb.answer()
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🖼 Пароль на день — 100 ⭐", callback_data="buy:pw_day")],
-        [InlineKeyboardButton(text="🖼 Пароль на месяц — 2500 ⭐", callback_data="buy:pw_month")],
+        [InlineKeyboardButton(text="🖼 Пароль на день — 198 ⭐", callback_data="buy:pw_day")],
+        [InlineKeyboardButton(text="🖼 Пароль на месяц — 5000 ⭐", callback_data="buy:pw_month")],
     ])
     await cb.message.answer("💳 Продление доступа за Telegram Stars:", reply_markup=kb)
 
@@ -549,14 +561,14 @@ async def auth_check(msg: Message, state: FSMContext):
     await msg.answer(f"✅ Доступ открыт {label} ({until[:10]}).", reply_markup=MENU)
 
 
-PRICES = {"pw_day": ("Пароль на день", 100), "pw_month": ("Пароль на месяц", 2500)}
+PRICES = {"pw_day": ("Пароль на день", 198), "pw_month": ("Пароль на месяц", 5000)}
 
 
 def auth_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔐 Авторизация", callback_data="auth")],
-        [InlineKeyboardButton(text="🖼 Пароль на день — 100 ⭐", callback_data="buy:pw_day")],
-        [InlineKeyboardButton(text="🖼 Пароль на месяц — 2500 ⭐", callback_data="buy:pw_month")],
+        [InlineKeyboardButton(text="🖼 Пароль на день — 198 ⭐", callback_data="buy:pw_day")],
+        [InlineKeyboardButton(text="🖼 Пароль на месяц — 5000 ⭐", callback_data="buy:pw_month")],
     ])
 
 
